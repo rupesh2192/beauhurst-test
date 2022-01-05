@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Company Stats</title>
+</head>
+<body>
+    <div>
+        <dl>
+            <dt>Most recently founded:</dt>
+            <dd id="most-recently-founded"></dd>
+        </dl>
+        <dl>
+            <dt>Average employee count:</dt>
+            <dd id="average-employee-count"></dd>
+        </dl>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $.get("/companies/stats/", function(data) {
+                $("#most-recently-founded").text(data.most_recently_founded[0].name);
+                $("#average-employee-count").text(data.average_employee_count);
+            });
+        });
+    </script>
+</body>
+</html>
