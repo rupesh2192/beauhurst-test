@@ -6,8 +6,11 @@ import datetime
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from rest_framework import status
+from rest_framework.reverse import reverse
+from rest_framework.test import APITestCase
 
-from .factories import CompanyFactory, EmployeeFactory, DealFactory
+from .factories import CompanyFactory, EmployeeFactory, DealFactory, UserFactory
 from .models import Company, Country
 from .serializers import UserCompanyMaxEmpSerializer
 
@@ -84,3 +87,58 @@ class CompanyModelTests(TestCase):
             "country__name": self.country.name,
             "avg_amt": 1000
         })
+
+
+class CompanyAPITests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.company = CompanyFactory()
+        cls.user = UserFactory()
+
+    def test_start_monitor(self):
+        """
+        Ensure authenticated user can start monitoring a company.
+        """
+        url = reverse('companies-monitor', args=[self.company.id])
+        response = self.client.patch(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.client.force_authenticate(self.user)
+        response = self.client.patch(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Check fetch monitors
+        self.client.logout()
+        url = reverse('companies-monitors')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.client.force_authenticate(self.user)
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        exp = {
+            "name": self.company.name,
+            "companies_house_id": self.company.companies_house_id,
+            "id": self.company.id,
+            "date_founded": str(self.company.date_founded)
+        }
+        self.assertIn(exp, response.json())
+
+    def test_stats(self):
+        """
+        Ensure stats API returns 200 with expected keys in the response.
+        """
+        url = reverse('companies-stats')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        exp = [
+            "recently_founded",
+            "quarter_wise",
+            "avg_employees",
+            "most_companies_created_by_user",
+            "user_company_with_max_emp",
+            "country_avg_deal_amt",
+        ]
+        self.assertListEqual(list(response.json().keys()), exp)
+
+    def test_company_stats_view(self):
+        url = reverse('companies-company-stats-view')
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.generic import GenericViewError
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from .models import Company
 from .serializers import CompanySerializer, UserCompanyMaxEmpSerializer
 
 
@@ -25,10 +22,6 @@ class CompanyViewSet(GenericViewSet, ListModelMixin):
         if self.action in ["stats", "company_stats_view"]:
             return []
         return super(CompanyViewSet, self).get_permissions()
-
-    @action(methods=["GET"], detail=False)
-    def stats(self, request, **kwargs):
-        return Response(data={})
 
     @action(methods=["PATCH"], detail=True)
     def monitor(self, request, **kwargs):

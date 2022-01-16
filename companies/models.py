@@ -88,8 +88,8 @@ class Company(TimeStampedModel):
         """
         :return: Username of the user who has created most no. of companies.
         """
-        return cls.objects.values("creator", "creator__username").annotate(c=Count("id")).order_by("-c")[1].get(
-            "creator__username")
+        temp = cls.objects.filter(creator__isnull=False).values("creator", "creator__username").annotate(c=Count("id")).order_by("-c")
+        return temp[0].get("creator__username") if len(temp) > 0 else None
 
     @classmethod
     def user_company_with_max_emp(cls) -> QuerySet:
