@@ -16,9 +16,17 @@ Including another URLconf
 from django.conf.urls import include, url
 from django.contrib import admin
 from django.http import HttpResponse
+from rest_framework.authtoken import views
+from rest_framework.routers import DefaultRouter
+
+from companies.views import CompanyViewSet
+
+router = DefaultRouter()
+router.register(r'companies', CompanyViewSet, basename="companies")
 
 urlpatterns = [
     url(r'^$', lambda request: HttpResponse('Hello, World!')),
     url(r'^admin/', admin.site.urls),
-    url(r'^companies/', include(('companies.urls', 'companies'), namespace='companies')),
+    url('api-token-auth/', views.obtain_auth_token),
+    url('', include(router.urls)),
 ]

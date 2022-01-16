@@ -3,51 +3,60 @@ from __future__ import unicode_literals
 
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.generic import GenericViewError
+from rest_framework.decorators import action
+from rest_framework.mixins import ListModelMixin
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from .models import Company
+from .serializers import CompanySerializer, UserCompanyMaxEmpSerializer
 
 
-def most_recently_founded_companies(limit=10):
-    companies = []
-    for comp in Company.objects.all():
-        serialized = {
-            'companies_house_id': comp.companies_house_id,
-            'name': comp.name,
-            'description': comp.description,
-            'date_founded': comp.date_founded,
-            'country__iso_code': comp.country.iso_code,
-            'creator__username': comp.creator.username,
+class CompanyViewSet(GenericViewSet, ListModelMixin):
+    serializer_class = CompanySerializer
+    permission_classes = [IsAuthenticated, ]
+
+    def get_queryset(self):
+        return self.serializer_class.Meta.model.objects.all()
+
+    def get_permissions(self):
+        if self.action in ["stats", "company_stats_view"]:
+            return []
+        return super(CompanyViewSet, self).get_permissions()
+
+    @action(methods=["GET"], detail=False)
+    def stats(self, request, **kwargs):
+        return Response(data={})
+
+    @action(methods=["PATCH"], detail=True)
+    def monitor(self, request, **kwargs):
+        instance = self.get_object()
+        instance.start_monitoring(self.request.user)
+        return Response(f"Started monitoring company {instance.name}")
+
+    @action(methods=["GET"], detail=False)
+    def monitors(self, request, **kwargs):
+        queryset = self.serializer_class.Meta.model.objects.filter(monitors=self.request.user)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(methods=["GET"], detail=False)
+    def stats(self, request, **kwargs):
+        model = self.serializer_class.Meta.model
+        stats = {
+            "recently_founded": self.serializer_class(model.recently_founded(), many=True).data,
+            "quarter_wise": model.quarter_wise(),
+            "avg_employees": model.avg_employees(),
+            "most_companies_created_by_user": model.most_companies_created_by_user(),
+            "user_company_with_max_emp": UserCompanyMaxEmpSerializer(model.user_company_with_max_emp(), many=True).data,
+            "country_avg_deal_amt": model.country_avg_deal_amt(),
         }
-        companies.append(serialized)
+        return Response(data=stats)
 
-    if limit:
-        companies = companies[:limit]
-    return sorted(companies, key=lambda comp: comp['date_founded'])
-
-
-def company_stats_api_view(request):
-    response = {
-        'most_recently_founded': most_recently_founded_companies(),
-        # NOTE: The below is dummy data so you can work on the front end without
-        # building out the API first. Replace the dummy data below once you've
-        # built functional replacements.
-        'average_employee_count': 5.0,
-        'companies_founded_per_quarter': [
-            {'year': 2017, 'quarter': 1, 'value': 5},
-            {'year': 2017, 'quarter': 2, 'value': 10},
-            {'year': 2017, 'quarter': 3, 'value': 3},
-            {'year': 2017, 'quarter': 4, 'value': 15},
-            {'year': 2018, 'quarter': 1, 'value': 24},
-        ],
-        'user_created_most_companies': 'Jeff',
-        'user_created_most_employees': 'Jane',
-        'average_deal_amount_raised_by_country': [
-            {'country': 'gb', 'average_deal_amount_raised': 500.0},
-            {'country': 'fr', 'average_deal_amount_raised': 450.0},
-        ]
-    }
-    return JsonResponse(response)
+    @action(methods=["GET"], detail=False)
+    def company_stats_view(self, request, **kwargs):
+        return render(request, 'companies/company_stats.html')
 
 
-def company_stats_view(request):
-    return render(request, 'companies/company_stats.html')
