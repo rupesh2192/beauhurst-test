@@ -1,28 +1,95 @@
-<!DOCTYPE html>
+{% load static %}
 <html>
 <head>
+    <link rel="icon"
+          href="https://3m6ybbnl5282f4sgl11owfo1-wpengine.netdna-ssl.com/wp-content/themes/bones-master/favicon.png">
     <title>Company Stats</title>
+    <script
+            src="https://code.jquery.com/jquery-3.1.1.min.js"
+            integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+            crossorigin="anonymous">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <link rel="stylesheet" type="text/css" href="{% static '/semantic.min.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static '/semantic.min.js' %}"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.24.0/axios.min.js"
+            integrity="sha512-u9akINsQsAkG9xjc1cnGF4zw5TFDwkxuc9vUp5dltDWYCSmyd0meygbvgXrlc/z7/o4a19Fb5V0OUE58J7dcyw=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    {% include "companies/recently-found-companies.html" %}
+    {% include "companies/quarter-wise-companies.html" %}
+    {% include "companies/deal-wise-companies.html" %}
 </head>
 <body>
-    <div>
-        <dl>
-            <dt>Most recently founded:</dt>
-            <dd id="most-recently-founded"></dd>
-        </dl>
-        <dl>
-            <dt>Average employee count:</dt>
-            <dd id="average-employee-count"></dd>
-        </dl>
-    </div>
+<!-- demo root element -->
+<div id="assessment" class="ui container">
+    <div class="ui grid">
+        <div class="center aligned row">
+            <div class="column ui raised padded segment">
+                <div class="ui two statistics">
+                    <div class="ui red statistic">
+                        <div class="value">
+                            [[ data.avg_employees ]]
+                        </div>
+                        <div class="label">
+                            Average Employee Count
+                        </div>
+                    </div>
+                    <div class="ui green statistic">
+                        <div class="value">
+                            [[ data.most_companies_created_by_user ]]
+                        </div>
+                        <div class="label">
+                            User With Most Companies
+                        </div>
+                    </div>
 
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <script type="text/javascript">
-        $(document).ready(function() {
-            $.get("/companies/stats/", function(data) {
-                $("#most-recently-founded").text(data.most_recently_founded[0].name);
-                $("#average-employee-count").text(data.average_employee_count);
-            });
-        });
-    </script>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="eight wide column ui raised padded segment">
+                <h3>Recently Founded Companies</h3>
+                <form id="search">
+                    Search <input name="query" v-model="searchQuery"/>
+                </form>
+                <div v-if="loading">Loading....</div>
+                <company-grid v-else
+                              :companies="data.recently_founded"
+                              :columns="gridColumns"
+                              :filter-key="searchQuery"
+                >
+                </company-grid>
+            </div>
+            <div class="eight wide column ui raised padded segment">
+                <h3>Quarter Wise Companies Formed</h3>
+                <form id="search1">
+                    Search <input name="query" v-model="searchQuery1"/>
+                </form>
+                <div v-if="loading">Loading....</div>
+                <quarter-wise-company-grid v-else
+                                           :companies="data.quarter_wise"
+                                           :columns="quarterWiseDataColumns"
+                                           :filter-key="searchQuery1">
+                </quarter-wise-company-grid>
+            </div>
+        </div>
+        <div class="row">
+            <div class="sixteen wide column ui raised padded segment">
+                <h3>Avg. Deal Amount Wise Companies</h3>
+                <form id="search2">
+                    Search <input name="query" v-model="searchQuery2"/>
+                </form>
+                <div v-if="loading">Loading....</div>
+                <deal-wise-companies v-else
+                                     :companies="data.country_avg_deal_amt"
+                                     :columns="dealWiseDataColumns"
+                                     :filter-key="searchQuery2">
+                </deal-wise-companies>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% include 'companies/util.html' %}
 </body>
 </html>
