@@ -118,6 +118,65 @@
         }
       });
 
+      // USER WITH MAX COMPANIES COMPONENT
+      Vue.component("user-with-max-employees-companies", {
+        delimiters: ["[[", "]]"],
+        template: "#user-with-max-employees-companies",
+        props: {
+          companies: Array,
+          columns: Array,
+          filterKey: String
+        },
+        data: function() {
+          var sortOrders = {};
+          this.columns.forEach(function(key) {
+            sortOrders[key] = 1;
+          });
+          return {
+            sortKey: "",
+            sortOrders: sortOrders,
+          };
+        },
+        computed: {
+          filteredCompanies: function() {
+            var sortKey = this.sortKey;
+            var filterKey = this.filterKey && this.filterKey.toLowerCase();
+            var order = this.sortOrders[sortKey] || 1;
+            var companies = this.companies;
+            if (filterKey) {
+              companies = companies.filter(function(row) {
+                return Object.keys(row).some(function(key) {
+                  return (
+                    String(row[key])
+                      .toLowerCase()
+                      .indexOf(filterKey) > -1
+                  );
+                });
+              });
+            }
+            if (sortKey) {
+              companies = companies.slice().sort(function(a, b) {
+                a = a[sortKey];
+                b = b[sortKey];
+                return (a === b ? 0 : a > b ? 1 : -1) * order;
+              });
+            }
+            return companies;
+          }
+        },
+        filters: {
+          capitalize: function(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+          }
+        },
+        methods: {
+          sortBy: function(key) {
+            this.sortKey = key;
+            this.sortOrders[key] = this.sortOrders[key] * -1;
+          }
+        }
+      });
+
       // DEALS WISE COMPANIES COMPONENT
       Vue.component("deal-wise-companies", {
         delimiters: ["[[", "]]"],
@@ -186,8 +245,10 @@
           gridColumns: ["name", "date_founded"],
           quarterWiseDataColumns: ["founded_quarter", "companies"],
           dealWiseDataColumns: ["country__name", "avg_amt"],
+          userWithMaxCompaniesDataColumns: ["name", "username", "emp_count"],
           searchQuery1: "",
           searchQuery2: "",
+          searchQuery3: "",
           data: {},
           loading: true,
           errored: false
@@ -209,5 +270,4 @@
             value = value.replaceAll("_", " ");
             return value.charAt(0).toUpperCase() + value.slice(1);
           });
-
 </script>

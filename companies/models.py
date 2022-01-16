@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Count, Avg
+from django.db.models import Count, Avg, QuerySet
 from django.db.models.functions import Trunc, Round
 from django.utils import timezone
 from model_utils.models import TimeStampedModel
@@ -37,18 +37,38 @@ class Company(TimeStampedModel):
         help_text='Users who want to be notified of updates to this company'
     )
 
+    def save(self, *args, **kwargs):
+        if self.date_founded > timezone.now().date():
+            raise ValidationError("Date founded must be a past date")
+        return super(Company, self).save(*args, **kwargs)
+
     def __unicode__(self):
         return u'{0}'.format(self.name)
 
-    def start_monitoring(self, user):
+    def start_monitoring(self, user) -> None:
+        """
+        Adds the given user to the monitor list for the company
+        :param user:
+        :return:
+        """
         self.monitors.add(user)
 
     @classmethod
-    def recently_founded(cls, limit=10):
+    def recently_founded(cls, limit=10) -> QuerySet:
+        """
+        Returns queryset of the company containing `limit` (count) companies sorted in descending order by date_founded
+        :param limit: no. of companies to be returned
+        :return: Queryset of companies.
+        """
         return cls.objects.order_by("-date_founded")[:limit]
 
     @classmethod
-    def quarter_wise(cls, year=5):
+    def quarter_wise(cls, year=5) -> QuerySet:
+        """
+        Returns count of companies grouped by quarter in which they were formed in last `year` years.
+        :param year: look back duration in years.
+        :return: Queryset of Companies
+        """
         temp = timezone.now().date()
         start_date = temp.replace(year=temp.year - year)
         return cls.objects.filter(date_founded__gte=start_date).annotate(
@@ -56,16 +76,28 @@ class Company(TimeStampedModel):
             companies=Count('id'))
 
     @classmethod
-    def avg_employees(cls):
-        return round(Employee.objects.values("company").annotate(c=Count("id")).aggregate(a=Avg("c")).get("a", 0), 2)
+    def avg_employees(cls) -> float:
+        """
+        Returns average count of employees for all companies.
+        :return: Average count.
+        """
+        return round(Employee.objects.count() / cls.objects.count(), 2)
 
     @classmethod
     def most_companies_created_by_user(cls):
+        """
+        :return: Username of the user who has created most no. of companies.
+        """
         return cls.objects.values("creator", "creator__username").annotate(c=Count("id")).order_by("-c")[1].get(
             "creator__username")
 
     @classmethod
-    def user_company_with_max_emp(cls):
+    def user_company_with_max_emp(cls) -> QuerySet:
+        """
+        Returns Queryset of Company grouped by User with the greatest total number of employees at all companies
+        they have created
+        :return: Queryset
+        """
         return Company.objects.raw("""select distinct on ("companies_company"."creator_id") creator_id , 
                     "au"."username","companies_company"."id", COUNT("companies_employee"."id") AS "emp_count" 
                     FROM "companies_company" LEFT OUTER JOIN "companies_employee" 
@@ -75,9 +107,13 @@ class Company(TimeStampedModel):
                     ORDER BY "creator_id", "emp_count" DESC""")
 
     @classmethod
-    def country_avg_deal_amt(cls):
+    def country_avg_deal_amt(cls) -> QuerySet:
+        """
+        Average deal amount raised by country
+        :return: Queryset of Companies with annotated column avg_amt.
+        """
         return Company.objects.values("country", "country__name").annotate(
-            avg_amt=Round(Avg("deal__amount_raised"), precision=2))
+            avg_amt=Round(Avg("deal__amount_raised"), precision=2)).filter(avg_amt__gt=0)
 
 
 class Deal(TimeStampedModel):

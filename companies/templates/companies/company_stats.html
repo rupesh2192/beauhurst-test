@@ -18,6 +18,7 @@
     {% include "companies/recently-found-companies.html" %}
     {% include "companies/quarter-wise-companies.html" %}
     {% include "companies/deal-wise-companies.html" %}
+    {% include "companies/user-with-max-employees-companies.html" %}
 </head>
 <body>
 <!-- demo root element -->
@@ -74,7 +75,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="sixteen wide column ui raised padded segment">
+            <div class="eight wide column ui raised padded segment">
                 <h3>Avg. Deal Amount Wise Companies</h3>
                 <form id="search2">
                     Search <input name="query" v-model="searchQuery2"/>
@@ -85,6 +86,18 @@
                                      :columns="dealWiseDataColumns"
                                      :filter-key="searchQuery2">
                 </deal-wise-companies>
+            </div>
+            <div class="eight wide column ui raised padded segment">
+                <h3>User With Max Employees in Companies</h3>
+                <form id="search3">
+                    Search <input name="query" v-model="searchQuer3"/>
+                </form>
+                <div v-if="loading">Loading....</div>
+                <user-with-max-employees-companies v-else
+                                     :companies="data.user_company_with_max_emp"
+                                     :columns="userWithMaxCompaniesDataColumns"
+                                     :filter-key="searchQuery3">
+                </user-with-max-employees-companies>
             </div>
         </div>
 
